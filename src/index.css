@@ -35,13 +35,16 @@
 }
 .editor-page .editor-page-header h1{
   margin:0!important;
-  font-size:22px!important;
+  font-family:'DM Sans',sans-serif!important;
+  font-size:18px!important;
+  font-weight:700!important;
   line-height:1.1!important;
+  letter-spacing:-.01em!important;
   white-space:nowrap;
 }
 .editor-page .editor-page-header p{display:none!important}
-.editor-page .editor-back{flex:none;font-size:10px!important;line-height:1!important}
-.editor-page .editor-mode{flex:none;margin:0!important;padding-left:10px!important;font-size:9px!important;line-height:1!important;letter-spacing:.1em!important}
+.editor-page .editor-back{flex:none;font-size:11px!important;line-height:1!important}
+.editor-page .editor-mode{flex:none;margin:0!important;padding-left:10px!important;font-size:10px!important;line-height:1!important;letter-spacing:.08em!important}
 .editor-page .editor-header-actions{flex:none;align-items:center}
 .editor-page .editor-header-actions .button{min-height:36px!important;padding:7px 14px!important}
 .editor-page .editor-settings{top:154px!important}
@@ -52,7 +55,7 @@
     padding:6px 16px!important;
   }
   .editor-page .editor-page-header>div:first-child{gap:7px}
-  .editor-page .editor-page-header h1{font-size:19px!important}
+  .editor-page .editor-page-header h1{font-size:17px!important}
   .editor-page .editor-mode{display:none!important}
 }
 
