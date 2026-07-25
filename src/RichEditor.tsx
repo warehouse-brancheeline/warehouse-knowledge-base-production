@@ -250,15 +250,15 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
       {selected && (
         <div className="media-inspector">
           <strong>Media dipilih</strong>
-          <button onClick={() => setMediaWidth(selected.width - 10)} title="Perkecil"><Minus /></button>
+          <button type="button" onClick={() => setMediaWidth(selected.width - 10)} title="Perkecil"><Minus /></button>
           <input type="range" min="25" max="100" value={selected.width} onChange={(event) => setMediaWidth(Number(event.target.value))} />
           <span>{selected.width}%</span>
-          <button onClick={() => setMediaWidth(selected.width + 10)} title="Perbesar">+</button>
+          <button type="button" onClick={() => setMediaWidth(selected.width + 10)} title="Perbesar">+</button>
           <span className="inspector-divider" />
-          <button onClick={() => alignMedia('left')} title="Posisi kiri"><AlignLeft /></button>
-          <button onClick={() => alignMedia('center')} title="Posisi tengah"><AlignCenter /></button>
-          <button onClick={() => alignMedia('right')} title="Posisi kanan"><AlignRight /></button>
-          <button className="danger" onClick={removeMedia} title="Hapus media"><Trash2 /></button>
+          <button type="button" onClick={() => alignMedia('left')} title="Posisi kiri"><AlignLeft /></button>
+          <button type="button" onClick={() => alignMedia('center')} title="Posisi tengah"><AlignCenter /></button>
+          <button type="button" onClick={() => alignMedia('right')} title="Posisi kanan"><AlignRight /></button>
+          <button type="button" className="danger" onClick={removeMedia} title="Hapus media"><Trash2 /></button>
         </div>
       )}
 
@@ -284,13 +284,13 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
       {youtubeOpen && (
         <div className="editor-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setYoutubeOpen(false)}>
           <div className="editor-dialog">
-            <button className="dialog-close" onClick={() => setYoutubeOpen(false)}><X /></button>
+            <button type="button" className="dialog-close" onClick={() => setYoutubeOpen(false)}><X /></button>
             <Youtube className="youtube-mark" />
             <h3>Sematkan video YouTube</h3>
             <p>Tempel link video biasa, Shorts, atau link youtu.be.</p>
             <input autoFocus value={youtubeUrl} onChange={(event) => { setYoutubeUrl(event.target.value); setYoutubeError(''); }} placeholder="https://www.youtube.com/watch?v=…" />
             {youtubeError && <span className="dialog-error">{youtubeError}</span>}
-            <div><button className="button secondary" onClick={() => setYoutubeOpen(false)}>Batal</button><button className="button primary" onClick={addYoutube}>Sematkan video</button></div>
+            <div><button type="button" className="button secondary" onClick={() => setYoutubeOpen(false)}>Batal</button><button type="button" className="button primary" onClick={addYoutube}>Sematkan video</button></div>
           </div>
         </div>
       )}
