@@ -17,33 +17,43 @@
 /* The editor toolbar stays in document flow and never covers article content. */
 .editor-page .editor-canvas .editor-toolbar{position:relative;top:auto}
 
-/* Compact full-page editor header. */
+/* Compact, single-line full-page editor header. */
 .editor-page .editor-page-header{
   box-sizing:border-box!important;
   width:100%!important;
-  height:76px!important;
-  min-height:76px!important;
-  padding:8px max(28px,calc((100vw - 1380px)/2))!important;
+  height:62px!important;
+  min-height:62px!important;
+  padding:7px max(28px,calc((100vw - 1380px)/2))!important;
   align-items:center!important;
+  gap:16px!important;
+}
+.editor-page .editor-page-header>div:first-child{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 .editor-page .editor-page-header h1{
-  display:block!important;
-  margin:3px 0 0!important;
-  font-size:24px!important;
-  line-height:1!important;
+  margin:0!important;
+  font-size:22px!important;
+  line-height:1.1!important;
+  white-space:nowrap;
 }
 .editor-page .editor-page-header p{display:none!important}
-.editor-page .editor-back{font-size:10px!important}
-.editor-page .editor-mode{font-size:9px!important;letter-spacing:.1em!important}
-.editor-page .editor-header-actions .button{min-height:40px!important;padding:9px 15px!important}
-.editor-page .editor-settings{top:168px!important}
+.editor-page .editor-back{flex:none;font-size:10px!important;line-height:1!important}
+.editor-page .editor-mode{flex:none;margin:0!important;padding-left:10px!important;font-size:9px!important;line-height:1!important;letter-spacing:.1em!important}
+.editor-page .editor-header-actions{flex:none;align-items:center}
+.editor-page .editor-header-actions .button{min-height:36px!important;padding:7px 14px!important}
+.editor-page .editor-settings{top:154px!important}
 @media(max-width:700px){
   .editor-page .editor-page-header{
-    height:68px!important;
-    min-height:68px!important;
-    padding:7px 16px!important;
+    height:56px!important;
+    min-height:56px!important;
+    padding:6px 16px!important;
   }
-  .editor-page .editor-page-header h1{font-size:21px!important}
+  .editor-page .editor-page-header>div:first-child{gap:7px}
+  .editor-page .editor-page-header h1{font-size:19px!important}
+  .editor-page .editor-mode{display:none!important}
 }
 
 /* Keep the full-page editor toolbar in document flow so it never covers content. */
