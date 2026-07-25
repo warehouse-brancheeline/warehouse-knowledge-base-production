@@ -14,8 +14,6 @@
 @media(max-width:960px){.editor-workspace{grid-template-columns:1fr}.editor-settings{position:static;grid-template-columns:1fr 1fr}.editor-settings>div,.editor-settings .editor-publish-note{grid-column:1/-1}.editor-canvas .editor-toolbar{top:192px}}
 @media(max-width:700px){.editor-page{min-height:calc(100vh - 68px)}.editor-page-header{top:68px;min-height:100px;padding:15px 16px}.editor-page-header h1{font-size:25px}.editor-page-header p,.editor-header-actions{display:none}.editor-workspace{padding:14px;gap:14px}.editor-settings{grid-template-columns:1fr;padding:17px}.editor-settings>div,.editor-settings .editor-publish-note{grid-column:auto}.editor-canvas{padding:12px}.editor-canvas .editor-toolbar{top:168px}.editor-canvas .editable-surface{padding:30px 18px;min-height:540px}.editor-mobile-actions{position:sticky;bottom:0;z-index:25;display:flex;justify-content:flex-end;gap:8px;padding:11px 14px;background:#fffffff2;backdrop-filter:blur(10px);border-top:1px solid var(--line)}}
 
-/* The editor toolbar stays in document flow and never covers article content. */
-.editor-page .editor-canvas .editor-toolbar{position:relative;top:auto}
 
 /* Compact, single-line full-page editor header. */
 .editor-page .editor-page-header{
@@ -60,5 +58,11 @@
   .editor-page .editor-mode{display:none!important}
 }
 
-/* Keep the full-page editor toolbar in document flow so it never covers content. */
-.editor-page .editor-canvas .editor-toolbar{position:relative;top:auto}
+/* Editor heading and toolbar always scroll with the document; never stick to the viewport. */
+.editor-page .editor-canvas-title,
+.editor-page .editor-canvas .editor-toolbar{
+  position:static!important;
+  top:auto!important;
+  inset:auto!important;
+  transform:none!important;
+}
