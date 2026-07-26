@@ -83,6 +83,7 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const editorRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const savedRange = useRef<Range | null>(null);
+  const spacingRange = useRef<Range | null>(null);
   const selectedTextRange = useRef<Range | null>(null);
   const initialized = useRef(false);
   const [selected, setSelected] = useState<MediaSelection | null>(null);
@@ -104,6 +105,7 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [spacingBefore, setSpacingBefore] = useState(0);
   const [spacingAfter, setSpacingAfter] = useState(8);
+  const [spacingTargetCount, setSpacingTargetCount] = useState(0);
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
@@ -139,7 +141,9 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const rememberSelection = () => {
     const selection = window.getSelection();
     if (selection?.rangeCount && editorRef.current?.contains(selection.anchorNode)) {
-      savedRange.current = selection.getRangeAt(0).cloneRange();
+      const range = selection.getRangeAt(0).cloneRange();
+      savedRange.current = range;
+      spacingRange.current = range.cloneRange();
     }
   };
 
@@ -161,24 +165,37 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
 
   const spacingTargets = () => {
     const root = editorRef.current;
-    const range = savedRange.current;
-    const targets = new Set<HTMLElement>();
-    if (!root || !range) return targets;
+    const range = spacingRange.current;
+    const matches: HTMLElement[] = [];
+    if (!root || !range) return new Set<HTMLElement>();
     root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,li').forEach((block) => {
-      if (range.intersectsNode(block)) targets.add(block);
+      if (range.intersectsNode(block)) matches.push(block);
     });
-    return targets;
+    const deepestMatches = matches.filter((block) => !matches.some((candidate) => candidate !== block && block.contains(candidate)));
+    return new Set(deepestMatches);
+  };
+
+  const spacingInPoints = (value: string) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return 0;
+    const points = value.trim().endsWith('pt') ? parsed : parsed * 0.75;
+    return Math.round(points * 2) / 2;
   };
 
   const syncSpacingFromSelection = () => {
-    const range = savedRange.current;
-    const startNode = range?.startContainer;
-    const startElement = startNode instanceof HTMLElement ? startNode : startNode?.parentElement;
-    const block = startElement?.closest<HTMLElement>('p,h1,h2,h3,blockquote,pre,li');
-    const before = Number.parseFloat(block?.style.marginTop || '');
-    const after = Number.parseFloat(block?.style.marginBottom || '');
-    setSpacingBefore(Number.isFinite(before) ? before : 0);
-    setSpacingAfter(Number.isFinite(after) ? after : 8);
+    const targets = spacingTargets();
+    const block = targets.values().next().value as HTMLElement | undefined;
+    setSpacingTargetCount(targets.size);
+    if (!block) return;
+    const computed = window.getComputedStyle(block);
+    const before = block.style.marginTop
+      ? spacingInPoints(block.style.marginTop)
+      : spacingInPoints(computed.marginTop);
+    const after = block.style.marginBottom
+      ? spacingInPoints(block.style.marginBottom)
+      : spacingInPoints(computed.marginBottom);
+    setSpacingBefore(before);
+    setSpacingAfter(after);
   };
 
   const applyParagraphSpacing = (beforeValue: number, afterValue: number, reset = false) => {
@@ -214,8 +231,7 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
 
   const resetParagraphSpacing = () => {
     applyParagraphSpacing(0, 0, true);
-    setSpacingBefore(0);
-    setSpacingAfter(8);
+    syncSpacingFromSelection();
   };
 
   const insertHtml = (html: string) => {
@@ -257,6 +273,7 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
 
   const captureTextSelection = () => {
     rememberSelection();
+    syncSpacingFromSelection();
     const selection = window.getSelection();
     if (!selection?.rangeCount || selection.isCollapsed || !editorRef.current) {
       setTextSelection(null);
@@ -563,7 +580,10 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
           <Tool title="Kode" onClick={() => command('formatBlock', 'pre')}><Code2 /></Tool>
         </div>
         <div className="tool-group spacing-live-group" onMouseDown={(event) => event.stopPropagation()}>
-          <span className="spacing-live-mark" title="Jarak sebelum dan sesudah paragraf">↕</span>
+          <span
+            className={`spacing-live-mark${spacingTargetCount ? ' active' : ''}`}
+            title={spacingTargetCount ? `${spacingTargetCount} blok teks dipilih` : 'Klik paragraf atau sorot beberapa paragraf'}
+          >↕</span>
           <label title="Jarak sebelum paragraf">
             <span>Sebelum</span>
             <span className="spacing-live-input">
@@ -571,9 +591,9 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
                 type="number"
                 min="0"
                 max="144"
-                step="1"
+                step="0.5"
                 value={spacingBefore}
-                onFocus={syncSpacingFromSelection}
+                disabled={!spacingTargetCount}
                 onChange={(event) => updateSpacingBefore(Number(event.target.value))}
               />
               <em>pt</em>
@@ -586,15 +606,15 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
                 type="number"
                 min="0"
                 max="144"
-                step="1"
+                step="0.5"
                 value={spacingAfter}
-                onFocus={syncSpacingFromSelection}
+                disabled={!spacingTargetCount}
                 onChange={(event) => updateSpacingAfter(Number(event.target.value))}
               />
               <em>pt</em>
             </span>
           </label>
-          <button type="button" className="spacing-live-reset" onClick={resetParagraphSpacing} title="Gunakan jarak bawaan">Bawaan</button>
+          <button type="button" className="spacing-live-reset" disabled={!spacingTargetCount} onClick={resetParagraphSpacing} title="Gunakan jarak bawaan">Bawaan</button>
         </div>
         <div className="tool-group">
           <Tool title="Rata kiri" onClick={() => command('justifyLeft')}><AlignLeft /></Tool>
