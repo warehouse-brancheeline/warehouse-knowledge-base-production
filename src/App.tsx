@@ -70,6 +70,7 @@ function Reader({article:a,related,admin,back,open,edit,remove}:{article:Article
   const updateActiveTab=()=>{
    let current=articleDoc.tabs[0]?.id||'';
    for(const tab of articleDoc.tabs){const heading=document.getElementById(tab.id);if(heading&&heading.getBoundingClientRect().top<=150)current=tab.id;else break}
+   if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4)current=articleDoc.tabs.at(-1)?.id||current;
    setActiveTab(current);
   };
   setActiveTab(articleDoc.tabs[0]?.id||'');updateActiveTab();
