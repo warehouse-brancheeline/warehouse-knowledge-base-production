@@ -23,7 +23,6 @@ type MediaSelection = {
 
 type AiMode = 'draft' | 'continue' | 'improve' | 'summarize';
 type SelectionAction = 'improve' | 'rewrite';
-type SpacingMode = 'tight' | 'normal' | 'relaxed';
 type TextSelection = {
   text: string;
   top: number;
@@ -103,6 +102,10 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const [selectionResult, setSelectionResult] = useState('');
   const [selectionError, setSelectionError] = useState('');
   const [selectionLoading, setSelectionLoading] = useState(false);
+  const [spacingOpen, setSpacingOpen] = useState(false);
+  const [spacingBefore, setSpacingBefore] = useState(0);
+  const [spacingAfter, setSpacingAfter] = useState(8);
+  const [spacingError, setSpacingError] = useState('');
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
@@ -158,33 +161,53 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
     emit();
   };
 
-  const applySpacing = (mode: SpacingMode) => {
+  const spacingTargets = () => {
     const root = editorRef.current;
-    if (!root) return;
-    restoreSelection();
-    const selection = window.getSelection();
-    const range = selection?.rangeCount ? selection.getRangeAt(0) : savedRange.current;
+    const range = savedRange.current;
     const targets = new Set<HTMLElement>();
-    const spacingBlocks = Array.from(root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,li'));
+    if (!root || !range) return targets;
+    root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,li').forEach((block) => {
+      if (range.intersectsNode(block)) targets.add(block);
+    });
+    return targets;
+  };
 
-    if (range) {
-      spacingBlocks.forEach((block) => {
-        if (!range.intersectsNode(block)) return;
-        const target = block.tagName === 'LI' ? block.closest<HTMLElement>('ul,ol') : block;
-        if (target && root.contains(target)) targets.add(target);
-      });
-    }
+  const openSpacing = () => {
+    rememberSelection();
+    const range = savedRange.current;
+    const startNode = range?.startContainer;
+    const startElement = startNode instanceof HTMLElement ? startNode : startNode?.parentElement;
+    const block = startElement?.closest<HTMLElement>('p,h1,h2,h3,blockquote,pre,li');
+    const before = Number.parseFloat(block?.style.marginTop || '');
+    const after = Number.parseFloat(block?.style.marginBottom || '');
+    setSpacingBefore(Number.isFinite(before) ? before : 0);
+    setSpacingAfter(Number.isFinite(after) ? after : 8);
+    setSpacingError('');
+    setSpacingOpen(true);
+  };
 
+  const applyParagraphSpacing = (reset = false) => {
+    const targets = spacingTargets();
     if (!targets.size) {
-      root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,ul,ol').forEach((block) => targets.add(block));
+      setSpacingError('Letakkan kursor pada paragraf atau sorot teks yang ingin diatur.');
+      return;
     }
-
+    const before = Math.max(0, Math.min(144, spacingBefore || 0));
+    const after = Math.max(0, Math.min(144, spacingAfter || 0));
     targets.forEach((target) => {
       target.classList.remove('spacing-tight', 'spacing-relaxed');
-      if (mode !== 'normal') target.classList.add(`spacing-${mode}`);
+      if (target.tagName === 'LI') target.closest('ul,ol')?.classList.remove('spacing-tight', 'spacing-relaxed');
+      if (reset) {
+        target.style.removeProperty('margin-top');
+        target.style.removeProperty('margin-bottom');
+      } else {
+        target.style.marginTop = `${before}pt`;
+        target.style.marginBottom = `${after}pt`;
+      }
     });
-    rememberSelection();
     emit();
+    setSpacingError('');
+    setSpacingOpen(false);
   };
 
   const insertHtml = (html: string) => {
@@ -532,21 +555,7 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
           <Tool title="Kode" onClick={() => command('formatBlock', 'pre')}><Code2 /></Tool>
         </div>
         <div className="tool-group spacing-tool-group">
-          <select
-            aria-label="Jarak teks"
-            title="Atur jarak teks"
-            defaultValue=""
-            onMouseDown={(event) => { event.stopPropagation(); rememberSelection(); }}
-            onChange={(event) => {
-              applySpacing(event.target.value as SpacingMode);
-              event.currentTarget.value = '';
-            }}
-          >
-            <option value="" disabled>Jarak</option>
-            <option value="tight">Rapat</option>
-            <option value="normal">Normal</option>
-            <option value="relaxed">Lega</option>
-          </select>
+          <Tool title="Jarak sebelum dan sesudah paragraf" onClick={openSpacing}><span className="spacing-tool-icon">↕</span></Tool>
         </div>
         <div className="tool-group">
           <Tool title="Rata kiri" onClick={() => command('justifyLeft')}><AlignLeft /></Tool>
@@ -619,6 +628,31 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
             <input autoFocus value={youtubeUrl} onChange={(event) => { setYoutubeUrl(event.target.value); setYoutubeError(''); }} placeholder="https://www.youtube.com/watch?v=…" />
             {youtubeError && <span className="dialog-error">{youtubeError}</span>}
             <div><button type="button" className="button secondary" onClick={() => setYoutubeOpen(false)}>Batal</button><button type="button" className="button primary" onClick={addYoutube}>Sematkan video</button></div>
+          </div>
+        </div>
+      )}
+
+      {spacingOpen && (
+        <div className="editor-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setSpacingOpen(false)}>
+          <div className="editor-dialog spacing-dialog">
+            <button type="button" className="dialog-close" onClick={() => setSpacingOpen(false)}><X /></button>
+            <span className="spacing-dialog-mark">↕</span>
+            <h3>Jarak paragraf</h3>
+            <p>Atur ruang sebelum dan sesudah paragraf atau poin daftar yang dipilih.</p>
+            <div className="spacing-fields">
+              <label>Sebelum
+                <span><input type="number" min="0" max="144" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /><em>pt</em></span>
+              </label>
+              <label>Sesudah
+                <span><input type="number" min="0" max="144" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /><em>pt</em></span>
+              </label>
+            </div>
+            {spacingError && <span className="dialog-error">{spacingError}</span>}
+            <div className="spacing-dialog-actions">
+              <button type="button" className="button secondary" onClick={() => setSpacingOpen(false)}>Batal</button>
+              <button type="button" className="button secondary" onClick={() => applyParagraphSpacing(true)}>Gunakan bawaan</button>
+              <button type="button" className="button primary" onClick={() => applyParagraphSpacing()}>Terapkan</button>
+            </div>
           </div>
         </div>
       )}
