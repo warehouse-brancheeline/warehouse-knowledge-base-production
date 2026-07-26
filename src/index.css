@@ -163,13 +163,17 @@
 /* Live paragraph spacing controls */
 .spacing-live-group{gap:6px!important;padding:0 7px 0 3px!important}
 .spacing-live-mark{width:24px;height:32px;display:grid;place-items:center;color:var(--green);font-size:18px;font-weight:800}
+.spacing-live-mark:not(.active){color:#a8b2ac}
 .spacing-live-group label{display:grid;grid-template-columns:auto 66px;align-items:center;gap:5px;color:#657169;font-size:9px;font-weight:800;white-space:nowrap}
 .spacing-live-input{height:30px;display:flex;align-items:center;border:1px solid #d3ddd6;border-radius:7px;background:#fff;overflow:hidden}
 .spacing-live-input:focus-within{border-color:#6f9d88;box-shadow:0 0 0 2px #1f6b4f16}
 .spacing-live-input input{width:42px;height:100%;min-width:0;border:0;outline:0;padding:0 3px 0 7px;background:transparent;color:var(--ink);font:700 11px 'DM Sans',sans-serif}
+.spacing-live-input:has(input:disabled){background:#f4f6f4;border-color:#e1e6e2}
+.spacing-live-input input:disabled{color:#a1aaa5;cursor:not-allowed}
 .spacing-live-input em{height:100%;padding:0 6px;display:flex;align-items:center;border-left:1px solid var(--line);background:#f5f8f6;color:#7a857f;font-size:8px;font-style:normal;font-weight:800}
 .spacing-live-group .spacing-live-reset{width:auto!important;padding:0 8px!important;border:1px solid #dbe4de!important;background:#f7faf8!important;color:#617068!important;font-size:9px!important}
 .spacing-live-group .spacing-live-reset:hover{border-color:#b9cec1!important;background:#eaf3ed!important;color:var(--green)!important}
+.spacing-live-group .spacing-live-reset:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){
   .spacing-live-group{width:100%;border-right:0!important;border-top:1px solid var(--line);padding-top:6px!important}
 }
