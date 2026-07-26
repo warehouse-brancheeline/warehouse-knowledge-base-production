@@ -22,6 +22,12 @@ type MediaSelection = {
 };
 
 type AiMode = 'draft' | 'continue' | 'improve' | 'summarize';
+type SelectionAction = 'improve' | 'rewrite';
+type TextSelection = {
+  text: string;
+  top: number;
+  left: number;
+};
 
 const aiModeLabels: Record<AiMode, { title: string; description: string }> = {
   draft: { title: 'Buat artikel lengkap', description: 'Susun draf terstruktur dari judul, kategori, dan ringkasan.' },
@@ -77,6 +83,7 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const editorRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const savedRange = useRef<Range | null>(null);
+  const selectedTextRange = useRef<Range | null>(null);
   const initialized = useRef(false);
   const [selected, setSelected] = useState<MediaSelection | null>(null);
   const [youtubeOpen, setYoutubeOpen] = useState(false);
@@ -88,6 +95,13 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const [aiResult, setAiResult] = useState('');
   const [aiError, setAiError] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [textSelection, setTextSelection] = useState<TextSelection | null>(null);
+  const [selectionOpen, setSelectionOpen] = useState(false);
+  const [selectionAction, setSelectionAction] = useState<SelectionAction>('improve');
+  const [selectionInstruction, setSelectionInstruction] = useState('');
+  const [selectionResult, setSelectionResult] = useState('');
+  const [selectionError, setSelectionError] = useState('');
+  const [selectionLoading, setSelectionLoading] = useState(false);
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
@@ -95,6 +109,20 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
       initialized.current = true;
     }
   }, [initialHtml]);
+
+  useEffect(() => {
+    const clearCollapsedSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !editorRef.current?.contains(selection.anchorNode)) setTextSelection(null);
+    };
+    const clearOnScroll = () => setTextSelection(null);
+    document.addEventListener('selectionchange', clearCollapsedSelection);
+    window.addEventListener('scroll', clearOnScroll, true);
+    return () => {
+      document.removeEventListener('selectionchange', clearCollapsedSelection);
+      window.removeEventListener('scroll', clearOnScroll, true);
+    };
+  }, []);
 
   const emit = () => {
     if (!editorRef.current) return;
@@ -166,6 +194,35 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
     setYoutubeError('');
   };
 
+  const captureTextSelection = () => {
+    rememberSelection();
+    const selection = window.getSelection();
+    if (!selection?.rangeCount || selection.isCollapsed || !editorRef.current) {
+      setTextSelection(null);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) {
+      setTextSelection(null);
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (text.length < 2) {
+      setTextSelection(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    selectedTextRange.current = range.cloneRange();
+    setTextSelection({
+      text,
+      top: rect.top > 58 ? rect.top - 48 : rect.bottom + 8,
+      left: Math.max(138, Math.min(window.innerWidth - 138, rect.left + rect.width / 2)),
+    });
+  };
+
   const closeAi = () => {
     if (aiLoading) return;
     setAiOpen(false);
@@ -231,6 +288,89 @@ Aturan keluaran:
     setAiOpen(false);
     setAiResult('');
     setAiError('');
+  };
+
+  const openSelectionAssistant = (action: SelectionAction) => {
+    setSelectionAction(action);
+    setSelectionInstruction('');
+    setSelectionResult('');
+    setSelectionError('');
+    setSelectionOpen(true);
+    setTextSelection(null);
+  };
+
+  const closeSelectionAssistant = () => {
+    if (selectionLoading) return;
+    setSelectionOpen(false);
+    setSelectionResult('');
+    setSelectionError('');
+  };
+
+  const requestSelectionSuggestion = async () => {
+    const selectedText = selectedTextRange.current?.toString().trim() || '';
+    if (!selectedText) {
+      setSelectionError('Teks yang dipilih sudah tidak tersedia. Pilih kembali kalimat pada artikel.');
+      return;
+    }
+    if (selectedText.length > 2500) {
+      setSelectionError('Teks yang dipilih terlalu panjang. Pilih maksimal beberapa paragraf pendek.');
+      return;
+    }
+
+    const task = selectionAction === 'improve'
+      ? 'Perbaiki ejaan, tata bahasa, kejelasan, dan efektivitas kalimat tanpa mengubah fakta atau maksud.'
+      : 'Tulis ulang teks sesuai instruksi pengguna. Pertahankan fakta dan jangan menambahkan informasi baru.';
+    const prompt = `Anda adalah editor SOP dan knowledge base gudang berbahasa Indonesia.
+
+Tugas: ${task}
+Instruksi pengguna: ${selectionInstruction.trim() || (selectionAction === 'rewrite' ? 'Buat lebih jelas dan profesional.' : 'Tidak ada instruksi tambahan.')}
+
+Teks yang dipilih:
+${selectedText}
+
+Konteks artikel:
+${(editorRef.current?.innerText || '').slice(0, 6000)}
+
+Kembalikan HANYA teks pengganti, tanpa tanda kutip, penjelasan, markdown, atau HTML.`;
+
+    setSelectionLoading(true);
+    setSelectionError('');
+    setSelectionResult('');
+    try {
+      const response = await generateArticleWithAI(prompt);
+      const cleanResponse = response.replace(/^```(?:text)?\s*/i, '').replace(/\s*```$/i, '');
+      const document = new DOMParser().parseFromString(cleanResponse, 'text/html');
+      const clean = (document.body.textContent || '').trim().replace(/^["“]|["”]$/g, '');
+      if (!clean) throw new Error('Gemini tidak menghasilkan saran yang dapat digunakan.');
+      setSelectionResult(clean);
+    } catch (error) {
+      setSelectionError(error instanceof Error ? error.message : 'Gemini belum dapat membuat saran. Coba lagi.');
+    } finally {
+      setSelectionLoading(false);
+    }
+  };
+
+  const applySelectionSuggestion = () => {
+    const range = selectedTextRange.current;
+    if (!range || !selectionResult) {
+      setSelectionError('Teks yang dipilih sudah tidak tersedia. Pilih kembali kalimat pada artikel.');
+      return;
+    }
+
+    const replacement = document.createTextNode(selectionResult);
+    range.deleteContents();
+    range.insertNode(replacement);
+    range.setStartAfter(replacement);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    savedRange.current = range.cloneRange();
+    selectedTextRange.current = null;
+    setSelectionOpen(false);
+    setSelectionResult('');
+    setSelectionError('');
+    emit();
   };
 
   const selectMedia = (element: HTMLElement | null) => {
@@ -392,14 +532,25 @@ Aturan keluaran:
         data-placeholder="Mulai menulis artikel di sini…"
         onInput={emit}
         onBlur={rememberSelection}
-        onKeyUp={rememberSelection}
-        onMouseUp={rememberSelection}
+        onKeyUp={captureTextSelection}
+        onMouseUp={captureTextSelection}
         onClick={handleEditorClick}
         onPointerDown={startResize}
         onDragStart={onDragStart}
         onDragOver={(event) => event.preventDefault()}
         onDrop={onDrop}
       />
+      {textSelection && (
+        <div
+          className="selection-ai-popover"
+          style={{ top: textSelection.top, left: textSelection.left }}
+          onMouseDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+        >
+          <span><Sparkles />Gemini</span>
+          <button type="button" onClick={() => openSelectionAssistant('improve')}>Perbaiki</button>
+          <button type="button" onClick={() => openSelectionAssistant('rewrite')}>Ubah</button>
+        </div>
+      )}
       <input ref={uploadRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={addImage} />
       <div className="editor-help">Tip: klik media untuk mengatur ukuran dan posisi. Tarik blok media ke paragraf lain untuk memindahkannya.</div>
 
@@ -457,6 +608,56 @@ Aturan keluaran:
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {selectionOpen && (
+        <div className="editor-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && closeSelectionAssistant()}>
+          <div className="editor-dialog selection-ai-dialog">
+            <button type="button" className="dialog-close" disabled={selectionLoading} onClick={closeSelectionAssistant}><X /></button>
+            <Sparkles className="ai-mark" />
+            <h3>Saran Gemini untuk teks pilihan</h3>
+            <p>Gemini hanya akan mengolah bagian yang Anda sorot. Artikel tidak berubah sebelum Anda menyetujui hasilnya.</p>
+
+            <div className="selection-action-tabs">
+              <button type="button" className={selectionAction === 'improve' ? 'active' : ''} onClick={() => { setSelectionAction('improve'); setSelectionResult(''); setSelectionError(''); }}>Perbaiki kalimat</button>
+              <button type="button" className={selectionAction === 'rewrite' ? 'active' : ''} onClick={() => { setSelectionAction('rewrite'); setSelectionResult(''); setSelectionError(''); }}>Ubah kalimat</button>
+            </div>
+
+            <div className="selection-original">
+              <span>Teks asli</span>
+              <p>{selectedTextRange.current?.toString()}</p>
+            </div>
+
+            <label className="ai-instruction">Instruksi tambahan (opsional)
+              <textarea
+                rows={3}
+                value={selectionInstruction}
+                onChange={(event) => setSelectionInstruction(event.target.value)}
+                placeholder={selectionAction === 'rewrite' ? 'Contoh: buat lebih singkat, lebih formal, atau mudah dipahami staf baru…' : 'Contoh: pertahankan istilah teknis tertentu…'}
+              />
+            </label>
+
+            {selectionResult && (
+              <div className="selection-suggestion">
+                <span>Saran Gemini</span>
+                <p>{selectionResult}</p>
+              </div>
+            )}
+            {selectionError && <span className="dialog-error">{selectionError}</span>}
+
+            <div className="ai-dialog-actions">
+              <button type="button" className="button secondary" disabled={selectionLoading} onClick={closeSelectionAssistant}>Batal</button>
+              {selectionResult
+                ? <>
+                    <button type="button" className="button secondary" onClick={() => void requestSelectionSuggestion()}>Coba lagi</button>
+                    <button type="button" className="button primary" onClick={applySelectionSuggestion}>Ganti teks pilihan</button>
+                  </>
+                : <button type="button" className="button primary" disabled={selectionLoading} onClick={() => void requestSelectionSuggestion()}>
+                    {selectionLoading ? <><LoaderCircle className="spin" />Gemini sedang menulis…</> : <><Sparkles />Buat saran</>}
+                  </button>}
+            </div>
           </div>
         </div>
       )}
