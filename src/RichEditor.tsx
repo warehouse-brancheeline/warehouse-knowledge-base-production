@@ -23,6 +23,7 @@ type MediaSelection = {
 
 type AiMode = 'draft' | 'continue' | 'improve' | 'summarize';
 type SelectionAction = 'improve' | 'rewrite';
+type SpacingMode = 'tight' | 'normal' | 'relaxed';
 type TextSelection = {
   text: string;
   top: number;
@@ -153,6 +154,35 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const command = (name: string, value?: string) => {
     restoreSelection();
     document.execCommand(name, false, value);
+    rememberSelection();
+    emit();
+  };
+
+  const applySpacing = (mode: SpacingMode) => {
+    const root = editorRef.current;
+    if (!root) return;
+    restoreSelection();
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : savedRange.current;
+    const targets = new Set<HTMLElement>();
+    const spacingBlocks = Array.from(root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,li'));
+
+    if (range) {
+      spacingBlocks.forEach((block) => {
+        if (!range.intersectsNode(block)) return;
+        const target = block.tagName === 'LI' ? block.closest<HTMLElement>('ul,ol') : block;
+        if (target && root.contains(target)) targets.add(target);
+      });
+    }
+
+    if (!targets.size) {
+      root.querySelectorAll<HTMLElement>('p,h1,h2,h3,blockquote,pre,ul,ol').forEach((block) => targets.add(block));
+    }
+
+    targets.forEach((target) => {
+      target.classList.remove('spacing-tight', 'spacing-relaxed');
+      if (mode !== 'normal') target.classList.add(`spacing-${mode}`);
+    });
     rememberSelection();
     emit();
   };
@@ -500,6 +530,23 @@ Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdo
           <Tool title="Daftar nomor" onClick={() => command('insertOrderedList')}><ListOrdered /></Tool>
           <Tool title="Kutipan" onClick={() => command('formatBlock', 'blockquote')}><Quote /></Tool>
           <Tool title="Kode" onClick={() => command('formatBlock', 'pre')}><Code2 /></Tool>
+        </div>
+        <div className="tool-group spacing-tool-group">
+          <select
+            aria-label="Jarak teks"
+            title="Atur jarak teks"
+            defaultValue=""
+            onMouseDown={(event) => { event.stopPropagation(); rememberSelection(); }}
+            onChange={(event) => {
+              applySpacing(event.target.value as SpacingMode);
+              event.currentTarget.value = '';
+            }}
+          >
+            <option value="" disabled>Jarak</option>
+            <option value="tight">Rapat</option>
+            <option value="normal">Normal</option>
+            <option value="relaxed">Lega</option>
+          </select>
         </div>
         <div className="tool-group">
           <Tool title="Rata kiri" onClick={() => command('justifyLeft')}><AlignLeft /></Tool>
