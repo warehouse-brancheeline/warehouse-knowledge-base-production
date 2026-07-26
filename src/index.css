@@ -160,21 +160,23 @@
   .document-tabs-card>strong{font-size:13px}
 }
 
-/* Text spacing control */
-.spacing-tool-icon{font-size:18px;line-height:1;font-weight:800}
-.spacing-dialog{width:min(420px,100%)}
-.spacing-dialog-mark{width:34px;height:34px;border-radius:9px;background:#e7f2eb;color:var(--green);display:grid;place-items:center;font-size:20px;font-weight:800}
-.spacing-fields{display:grid!important;grid-template-columns:1fr 1fr;gap:12px!important;margin:18px 0 4px!important}
-.spacing-fields label{display:grid;gap:7px;color:#526058;font-size:11px;font-weight:800}
-.spacing-fields label>span{height:42px;display:flex;align-items:center;border:1px solid #d3ddd6;border-radius:9px;background:#fff;overflow:hidden}
-.spacing-fields input{width:100%;height:100%;min-width:0;border:0;outline:0;padding:0 10px;color:var(--ink);font-size:13px;font-weight:700}
-.spacing-fields em{height:100%;padding:0 10px;display:flex;align-items:center;border-left:1px solid var(--line);background:#f5f8f6;color:#77827c;font-size:10px;font-style:normal;font-weight:800}
-.spacing-fields label>span:focus-within{border-color:#6f9d88;box-shadow:0 0 0 3px #1f6b4f16}
-.spacing-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-@media(max-width:480px){
-  .spacing-fields{grid-template-columns:1fr}
-  .spacing-dialog-actions{display:grid!important}
-  .spacing-dialog-actions .button{width:100%}
+/* Live paragraph spacing controls */
+.spacing-live-group{gap:6px!important;padding:0 7px 0 3px!important}
+.spacing-live-mark{width:24px;height:32px;display:grid;place-items:center;color:var(--green);font-size:18px;font-weight:800}
+.spacing-live-group label{display:grid;grid-template-columns:auto 66px;align-items:center;gap:5px;color:#657169;font-size:9px;font-weight:800;white-space:nowrap}
+.spacing-live-input{height:30px;display:flex;align-items:center;border:1px solid #d3ddd6;border-radius:7px;background:#fff;overflow:hidden}
+.spacing-live-input:focus-within{border-color:#6f9d88;box-shadow:0 0 0 2px #1f6b4f16}
+.spacing-live-input input{width:42px;height:100%;min-width:0;border:0;outline:0;padding:0 3px 0 7px;background:transparent;color:var(--ink);font:700 11px 'DM Sans',sans-serif}
+.spacing-live-input em{height:100%;padding:0 6px;display:flex;align-items:center;border-left:1px solid var(--line);background:#f5f8f6;color:#7a857f;font-size:8px;font-style:normal;font-weight:800}
+.spacing-live-group .spacing-live-reset{width:auto!important;padding:0 8px!important;border:1px solid #dbe4de!important;background:#f7faf8!important;color:#617068!important;font-size:9px!important}
+.spacing-live-group .spacing-live-reset:hover{border-color:#b9cec1!important;background:#eaf3ed!important;color:var(--green)!important}
+@media(max-width:900px){
+  .spacing-live-group{width:100%;border-right:0!important;border-top:1px solid var(--line);padding-top:6px!important}
+}
+@media(max-width:520px){
+  .spacing-live-group{gap:4px!important;overflow-x:auto}
+  .spacing-live-group label{grid-template-columns:auto 61px}
+  .spacing-live-input input{width:37px}
 }
 .editable-surface p.spacing-tight,.article-body p.spacing-tight{margin-top:0!important;margin-bottom:6px!important;line-height:1.4!important}
 .editable-surface h1.spacing-tight,.editable-surface h2.spacing-tight,.editable-surface h3.spacing-tight,.article-body h1.spacing-tight,.article-body h2.spacing-tight,.article-body h3.spacing-tight{margin-top:18px!important;margin-bottom:6px!important;line-height:1.25!important}
