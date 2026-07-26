@@ -99,3 +99,24 @@
   .ai-result-actions{display:grid}
   .ai-result-actions .button{width:100%}
 }
+
+/* Gemini actions for selected sentences */
+.selection-ai-popover{position:fixed;z-index:145;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:5px;background:#17271f;color:#fff;border-radius:10px;box-shadow:0 10px 30px #07140d4d;white-space:nowrap}
+.selection-ai-popover:after{content:'';position:absolute;left:50%;bottom:-5px;width:10px;height:10px;background:#17271f;transform:translateX(-50%) rotate(45deg);z-index:-1}
+.selection-ai-popover>span{display:flex;align-items:center;gap:5px;padding:0 7px;font-size:10px;font-weight:800;color:#bfe6d2}
+.selection-ai-popover svg{width:14px;height:14px}
+.selection-ai-popover button{border:0;border-radius:7px;background:transparent;color:#fff;padding:7px 9px;font-size:10px;font-weight:700}
+.selection-ai-popover button:hover{background:#ffffff1c}
+.selection-ai-dialog{width:min(620px,100%)}
+.selection-action-tabs{display:flex!important;gap:7px!important;margin:16px 0!important}
+.selection-action-tabs button{flex:1;border:1px solid #d7e1da;background:#fff;border-radius:9px;padding:9px;color:#56625b;font-size:11px;font-weight:750}
+.selection-action-tabs button.active{border-color:var(--green);background:#edf6f1;color:var(--green)}
+.selection-original,.selection-suggestion{margin:0 0 14px;padding:13px 15px;border-radius:10px;background:#f4f7f5;border:1px solid #e0e7e2}
+.selection-suggestion{margin-top:14px;background:#edf6f1;border-color:#cfe1d7}
+.selection-original>span,.selection-suggestion>span{display:block;margin-bottom:5px;color:#718078;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.selection-original p,.selection-suggestion p{margin:0!important;color:#2c3731!important;font-family:'DM Sans',sans-serif;font-size:12px!important;line-height:1.6;white-space:pre-wrap}
+@media(max-width:700px){
+  .selection-ai-popover{max-width:calc(100vw - 16px)}
+  .selection-ai-dialog .ai-dialog-actions{display:grid}
+  .selection-ai-dialog .ai-dialog-actions .button{width:100%}
+}
