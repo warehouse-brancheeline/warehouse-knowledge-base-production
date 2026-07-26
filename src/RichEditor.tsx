@@ -1,18 +1,64 @@
 import { ChangeEvent, DragEvent, MouseEvent, PointerEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, Bold, Code2, Heading1, Heading2, ImagePlus,
-  Italic, Link, List, ListOrdered, Minus, Quote, Redo2, RemoveFormatting,
-  Strikethrough, Trash2, Underline, Undo2, X, Youtube,
+  Italic, Link, List, ListOrdered, LoaderCircle, Minus, Quote, Redo2, RemoveFormatting,
+  Sparkles, Strikethrough, Trash2, Underline, Undo2, X, Youtube,
 } from 'lucide-react';
+import { generateArticleWithAI } from './firebase';
 
 interface RichEditorProps {
   initialHtml?: string;
   onChange: (html: string) => void;
+  articleContext?: {
+    title: string;
+    category: string;
+    summary: string;
+  };
 }
 
 type MediaSelection = {
   element: HTMLElement;
   width: number;
+};
+
+type AiMode = 'draft' | 'continue' | 'improve' | 'summarize';
+
+const aiModeLabels: Record<AiMode, { title: string; description: string }> = {
+  draft: { title: 'Buat artikel lengkap', description: 'Susun draf terstruktur dari judul, kategori, dan ringkasan.' },
+  continue: { title: 'Lanjutkan tulisan', description: 'Tambahkan bagian berikutnya berdasarkan isi artikel saat ini.' },
+  improve: { title: 'Rapikan seluruh artikel', description: 'Perjelas bahasa, alur, dan format tanpa mengubah maksud.' },
+  summarize: { title: 'Buat ringkasan penutup', description: 'Tambahkan rangkuman singkat dan poin tindakan utama.' },
+};
+
+const sanitizeAiHtml = (raw: string) => {
+  const parser = new DOMParser();
+  const document = parser.parseFromString(raw.replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/i, ''), 'text/html');
+  const allowed = new Set(['H1', 'H2', 'H3', 'P', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'U', 'S', 'BLOCKQUOTE', 'PRE', 'CODE', 'A', 'BR', 'HR', 'DIV', 'SPAN']);
+  const removable = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'FORM', 'INPUT', 'BUTTON']);
+
+  Array.from(document.body.querySelectorAll('*')).forEach((element) => {
+    if (removable.has(element.tagName)) {
+      element.remove();
+      return;
+    }
+    if (!allowed.has(element.tagName)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+
+    const className = element.getAttribute('class') || '';
+    const safeClasses = className.split(/\s+/).filter((name) => ['lead', 'callout', 'danger', 'check-list'].includes(name));
+    const href = element.tagName === 'A' ? element.getAttribute('href') || '' : '';
+    Array.from(element.attributes).forEach((attribute) => element.removeAttribute(attribute.name));
+    if (safeClasses.length) element.setAttribute('class', safeClasses.join(' '));
+    if (element.tagName === 'A' && /^https?:\/\//i.test(href)) {
+      element.setAttribute('href', href);
+      element.setAttribute('target', '_blank');
+      element.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
+  return document.body.innerHTML.trim();
 };
 
 const youtubeId = (value: string) => {
@@ -27,7 +73,7 @@ const youtubeId = (value: string) => {
   }
 };
 
-export default function RichEditor({ initialHtml = '', onChange }: RichEditorProps) {
+export default function RichEditor({ initialHtml = '', onChange, articleContext }: RichEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const savedRange = useRef<Range | null>(null);
@@ -36,6 +82,12 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
   const [youtubeOpen, setYoutubeOpen] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [youtubeError, setYoutubeError] = useState('');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiMode, setAiMode] = useState<AiMode>('draft');
+  const [aiInstruction, setAiInstruction] = useState('');
+  const [aiResult, setAiResult] = useState('');
+  const [aiError, setAiError] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
@@ -112,6 +164,73 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
     setYoutubeOpen(false);
     setYoutubeUrl('');
     setYoutubeError('');
+  };
+
+  const closeAi = () => {
+    if (aiLoading) return;
+    setAiOpen(false);
+    setAiResult('');
+    setAiError('');
+  };
+
+  const requestAi = async () => {
+    if (aiMode === 'draft' && !articleContext?.title.trim()) {
+      setAiError('Isi judul artikel terlebih dahulu agar AI memahami topiknya.');
+      return;
+    }
+
+    const currentHtml = editorRef.current?.innerHTML || '';
+    const tasks: Record<AiMode, string> = {
+      draft: 'Tulis artikel operasional yang lengkap, praktis, dan siap digunakan. Buat pembuka singkat, beberapa bagian H2, langkah atau checklist bila relevan, dan penutup.',
+      continue: 'Lanjutkan artikel ini dengan bagian baru yang paling logis. Jangan ulangi isi yang sudah ada.',
+      improve: 'Tulis ulang seluruh isi agar lebih jelas, ringkas, konsisten, dan mudah dipraktikkan. Pertahankan semua fakta penting.',
+      summarize: 'Buat bagian penutup berisi rangkuman singkat dan poin tindakan utama. Jangan ulangi paragraf panjang.',
+    };
+    const prompt = `Anda adalah editor SOP dan knowledge base gudang berbahasa Indonesia.
+
+Judul: ${articleContext?.title || 'Belum diisi'}
+Kategori: ${articleContext?.category || 'Belum diisi'}
+Ringkasan: ${articleContext?.summary || 'Belum diisi'}
+
+Tugas: ${tasks[aiMode]}
+Instruksi tambahan dari pengguna: ${aiInstruction.trim() || 'Tidak ada.'}
+
+Isi artikel saat ini:
+${currentHtml.slice(0, 14000)}
+
+Aturan keluaran:
+- Kembalikan HANYA HTML isi artikel, tanpa markdown dan tanpa tag html/body.
+- Gunakan hanya h1, h2, h3, p, ul, ol, li, strong, em, blockquote, pre, code, a, br, hr.
+- Jangan mengarang nomor peraturan, statistik, nama sistem, atau fakta yang tidak diberikan.
+- Gunakan bahasa Indonesia profesional, jelas, dan langsung dapat dipraktikkan.
+- Jangan menyertakan gambar, iframe, script, style, formulir, atau tombol.`;
+
+    setAiLoading(true);
+    setAiError('');
+    setAiResult('');
+    try {
+      const response = await generateArticleWithAI(prompt);
+      const clean = sanitizeAiHtml(response);
+      if (!clean) throw new Error('AI tidak menghasilkan isi yang dapat digunakan.');
+      setAiResult(clean);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : 'Permintaan AI gagal. Coba lagi beberapa saat.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAi = (replace: boolean) => {
+    if (!aiResult || !editorRef.current) return;
+    if (replace) {
+      editorRef.current.innerHTML = aiResult;
+      emit();
+    } else {
+      insertHtml(aiResult);
+    }
+    setAiOpen(false);
+    setAiResult('');
+    setAiError('');
   };
 
   const selectMedia = (element: HTMLElement | null) => {
@@ -245,6 +364,9 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
           <Tool title="Embed YouTube" onClick={() => { rememberSelection(); setYoutubeOpen(true); }}><Youtube /></Tool>
           <Tool title="Hapus format" onClick={() => command('removeFormat')}><RemoveFormatting /></Tool>
         </div>
+        <div className="tool-group ai-tool-group">
+          <Tool title="Bantuan AI" onClick={() => { rememberSelection(); setAiOpen(true); }}><Sparkles /></Tool>
+        </div>
       </div>
 
       {selected && (
@@ -291,6 +413,50 @@ export default function RichEditor({ initialHtml = '', onChange }: RichEditorPro
             <input autoFocus value={youtubeUrl} onChange={(event) => { setYoutubeUrl(event.target.value); setYoutubeError(''); }} placeholder="https://www.youtube.com/watch?v=…" />
             {youtubeError && <span className="dialog-error">{youtubeError}</span>}
             <div><button type="button" className="button secondary" onClick={() => setYoutubeOpen(false)}>Batal</button><button type="button" className="button primary" onClick={addYoutube}>Sematkan video</button></div>
+          </div>
+        </div>
+      )}
+
+      {aiOpen && (
+        <div className="editor-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && closeAi()}>
+          <div className="editor-dialog ai-dialog">
+            <button type="button" className="dialog-close" disabled={aiLoading} onClick={closeAi}><X /></button>
+            <Sparkles className="ai-mark" />
+            <h3>Bantuan menulis dengan AI</h3>
+            <p>Pilih bantuan yang dibutuhkan. Hasilnya selalu ditampilkan untuk ditinjau sebelum dimasukkan ke artikel.</p>
+
+            {!aiResult ? (
+              <>
+                <div className="ai-mode-grid">
+                  {(Object.keys(aiModeLabels) as AiMode[]).map((mode) => (
+                    <button type="button" key={mode} className={aiMode === mode ? 'active' : ''} onClick={() => setAiMode(mode)}>
+                      <strong>{aiModeLabels[mode].title}</strong>
+                      <span>{aiModeLabels[mode].description}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="ai-instruction">Instruksi tambahan (opsional)
+                  <textarea rows={3} value={aiInstruction} onChange={(event) => setAiInstruction(event.target.value)} placeholder="Contoh: gunakan bahasa sederhana untuk staf baru…" />
+                </label>
+                {aiError && <span className="dialog-error">{aiError}</span>}
+                <div className="ai-dialog-actions">
+                  <button type="button" className="button secondary" disabled={aiLoading} onClick={closeAi}>Batal</button>
+                  <button type="button" className="button primary" disabled={aiLoading} onClick={() => void requestAi()}>
+                    {aiLoading ? <><LoaderCircle className="spin" />AI sedang menulis…</> : <><Sparkles />Buat draf</>}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ai-preview" dangerouslySetInnerHTML={{ __html: aiResult }} />
+                {aiError && <span className="dialog-error">{aiError}</span>}
+                <div className="ai-dialog-actions ai-result-actions">
+                  <button type="button" className="button secondary" onClick={() => setAiResult('')}>Ubah permintaan</button>
+                  <button type="button" className="button secondary" onClick={() => applyAi(false)}>Sisipkan di kursor</button>
+                  <button type="button" className="button primary" onClick={() => applyAi(true)}>Ganti isi artikel</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
