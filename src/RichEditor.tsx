@@ -213,13 +213,26 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
     const safeAfter = after === undefined ? undefined : Math.max(0, Math.min(144, after || 0));
     targets.forEach((target) => {
       target.classList.remove('spacing-tight', 'spacing-relaxed');
-      if (target.tagName === 'LI') target.closest('ul,ol')?.classList.remove('spacing-tight', 'spacing-relaxed');
+      const list = target.tagName === 'LI' ? target.closest<HTMLElement>('ul,ol') : null;
+      if (list) list.classList.remove('spacing-tight', 'spacing-relaxed');
       if (reset) {
+        target.classList.remove('word-spacing');
         target.style.removeProperty('margin-top');
         target.style.removeProperty('margin-bottom');
+        if (list && !list.querySelector('li.word-spacing')) {
+          list.classList.remove('word-list-spacing');
+          list.style.removeProperty('margin-top');
+          list.style.removeProperty('margin-bottom');
+        }
       } else {
+        target.classList.add('word-spacing');
         if (safeBefore !== undefined) target.style.marginTop = `${safeBefore}pt`;
         if (safeAfter !== undefined) target.style.marginBottom = `${safeAfter}pt`;
+        if (list) {
+          list.classList.add('word-list-spacing');
+          list.style.marginTop = '0pt';
+          list.style.marginBottom = '0pt';
+        }
       }
     });
     emit();
