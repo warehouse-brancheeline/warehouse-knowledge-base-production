@@ -331,7 +331,15 @@ ${selectedText}
 Konteks artikel:
 ${(editorRef.current?.innerText || '').slice(0, 6000)}
 
-Kembalikan HANYA teks pengganti, tanpa tanda kutip, penjelasan, markdown, atau HTML.`;
+Aturan panjang dan kelengkapan:
+- Jangan otomatis meringkas atau memendekkan teks.
+- Tentukan panjang yang wajar dari maksud teks, konteks artikel, dan instruksi pengguna; hasil boleh pendek atau panjang sesuai kebutuhan.
+- Jika pengguna meminta hasil lengkap, mendalam, panjang, tajam, atau terperinci, kembangkan teks secara proporsional menjadi beberapa kalimat atau paragraf bila diperlukan.
+- Jika tidak ada permintaan khusus tentang panjang, pertahankan kurang lebih tingkat rincian dan cakupan teks asli.
+- Hilangkan pengulangan yang tidak perlu, tetapi jangan menghapus rincian penting hanya demi membuat hasil lebih singkat.
+- Jangan menambahkan fakta, angka, kebijakan, atau prosedur baru yang tidak tersedia pada teks atau konteks.
+
+Kembalikan HANYA teks pengganti yang utuh, tanpa tanda kutip, penjelasan, markdown, atau HTML. Tidak ada batas jumlah kalimat selama semuanya relevan.`;
 
     setSelectionLoading(true);
     setSelectionError('');
@@ -635,7 +643,7 @@ Kembalikan HANYA teks pengganti, tanpa tanda kutip, penjelasan, markdown, atau H
                 rows={3}
                 value={selectionInstruction}
                 onChange={(event) => setSelectionInstruction(event.target.value)}
-                placeholder={selectionAction === 'rewrite' ? 'Contoh: buat lebih singkat, lebih formal, atau mudah dipahami staf baru…' : 'Contoh: pertahankan istilah teknis tertentu…'}
+                placeholder={selectionAction === 'rewrite' ? 'Contoh: buat lebih lengkap dan tajam, lebih formal, atau lebih singkat…' : 'Contoh: pertahankan semua rincian dan istilah teknis…'}
               />
             </label>
 
