@@ -120,3 +120,36 @@
   .selection-ai-dialog .ai-dialog-actions{display:grid}
   .selection-ai-dialog .ai-dialog-actions .button{width:100%}
 }
+
+/* Sticky document tabs for article navigation */
+.reader-shell{max-width:1320px}
+.reader-layout{display:grid;grid-template-columns:minmax(190px,220px) minmax(0,780px);justify-content:center;align-items:start;gap:46px}
+.reader-column{min-width:0}
+.reader-column .reader,.reader-column .related{max-width:none}
+.document-tabs{position:sticky;top:108px;max-height:calc(100vh - 136px);overflow:auto;scrollbar-width:thin;scrollbar-color:#cbd8d0 transparent}
+.document-tabs-card{padding:18px 14px 14px;border:1px solid var(--line);border-radius:14px;background:#fbfcfb;box-shadow:0 8px 24px #1731240a}
+.document-tabs-card>strong{display:block;margin:5px 8px 13px;color:var(--ink);font-size:14px}
+.document-tabs-card nav{display:grid;gap:3px}
+.document-tabs-card button{width:100%;position:relative;border:0;border-radius:8px;background:transparent;padding:9px 9px 9px 20px;text-align:left;color:#67736c;font-size:11px;line-height:1.45;font-weight:600}
+.document-tabs-card button:hover{background:#edf4f0;color:var(--green)}
+.document-tabs-card button>span{position:absolute;left:8px;top:15px;width:5px;height:5px;border-radius:50%;background:#c7d2cc}
+.document-tabs-card button.active{background:#e8f2ec;color:var(--green);font-weight:800}
+.document-tabs-card button.active>span{background:var(--green);box-shadow:0 0 0 3px #1f6b4f1a}
+.document-tabs-card button.level-3{padding-left:31px;font-size:10px}
+.document-tabs-card button.level-3>span{left:19px;width:4px;height:4px}
+.article-body h2,.article-body h3{scroll-margin-top:108px}
+@media(max-width:1050px){
+  .reader-layout{grid-template-columns:minmax(0,780px);gap:18px}
+  .document-tabs{position:relative;top:auto;max-height:none;overflow:visible}
+  .document-tabs-card{padding:14px}
+  .document-tabs-card>strong{margin-bottom:9px}
+  .document-tabs-card nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+  .document-tabs-card button{width:auto;min-width:max-content;padding:8px 11px 8px 22px;white-space:nowrap;border:1px solid var(--line);background:#fff}
+  .document-tabs-card button>span{left:10px;top:13px}
+  .document-tabs-card button.level-3{padding-left:22px;font-size:11px}
+  .document-tabs-card button.level-3>span{left:10px}
+}
+@media(max-width:640px){
+  .document-tabs-card{border-radius:11px}
+  .document-tabs-card>strong{font-size:13px}
+}
