@@ -5,6 +5,7 @@ import { isAdminUser, observeAuth, signInAdmin, signOutAdmin } from './firebase'
 
 type Category = 'SOP' | 'Panduan' | 'Instruksi Kerja' | 'Safety' | 'Form & Template';
 interface Article { id:string; title:string; category:Category; summary:string; content:string; author:string; updatedAt:string; readTime:number; }
+interface DocumentTab { id:string; label:string; level:2|3; }
 const categories: Category[] = ['SOP','Panduan','Instruksi Kerja','Safety','Form & Template'];
 const meta: Record<Category,{icon:typeof FileText;color:string}> = {
   SOP:{icon:FileText,color:'blue'}, Panduan:{icon:BookOpen,color:'green'}, 'Instruksi Kerja':{icon:CheckCircle2,color:'amber'},
@@ -20,6 +21,17 @@ const seeds:Article[] = [
 const key='warehouse-kb-v2';
 const date=(v:string)=>new Intl.DateTimeFormat('id-ID',{day:'numeric',month:'long',year:'numeric'}).format(new Date(v));
 const plain=(h:string)=>h.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+const prepareArticleDocument=(html:string)=>{
+ const parsed=new DOMParser().parseFromString(html,'text/html'),used=new Set<string>(),tabs:DocumentTab[]=[];
+ parsed.body.querySelectorAll('h2,h3').forEach((heading,index)=>{
+  const label=(heading.textContent||'').trim()||`Bagian ${index+1}`;
+  const base=label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||`bagian-${index+1}`;
+  let id=`bagian-${base}`,suffix=2;
+  while(used.has(id)) id=`bagian-${base}-${suffix++}`;
+  used.add(id);heading.id=id;tabs.push({id,label,level:heading.tagName==='H3'?3:2});
+ });
+ return {html:parsed.body.innerHTML,tabs};
+};
 
 export default function App(){
  const [articles,setArticles]=useState<Article[]>(()=>{try{return JSON.parse(localStorage.getItem(key)||'null')||seeds}catch{return seeds}});
@@ -51,7 +63,31 @@ export default function App(){
  </div>
 }
 function Card({article:a,admin,open,edit,remove}:{key?:string;article:Article;admin:boolean;open:()=>void;edit:()=>void;remove:()=>void}){const Icon=meta[a.category].icon;return <article className="card"><button className="card-main" onClick={open}><span className={`cat-icon ${meta[a.category].color}`}><Icon/></span><span className="category">{a.category}</span><h3>{a.title}</h3><p>{a.summary}</p><div className="card-meta"><span><Clock3/>{a.readTime} menit</span><span>{date(a.updatedAt)}</span><ChevronRight/></div></button>{admin&&<div className="card-admin"><button onClick={edit}><Edit3/>Edit</button><button onClick={remove} className="danger"><Trash2/>Hapus</button></div>}</article>}
-function Reader({article:a,related,admin,back,open,edit,remove}:{article:Article;related:Article[];admin:boolean;back:()=>void;open:(a:Article)=>void;edit:()=>void;remove:()=>void}){const Icon=meta[a.category].icon;return <main className="reader-shell"><div className="reader-tools"><button onClick={back}><ArrowLeft/>Kembali ke semua artikel</button>{admin&&<div><button onClick={edit}><Edit3/>Edit</button><button onClick={remove} className="danger"><Trash2/>Hapus</button></div>}</div><article className="reader"><header><span className={`cat-icon ${meta[a.category].color}`}><Icon/></span><span className="category">{a.category}</span><h1>{a.title}</h1><p>{a.summary}</p><div className="byline"><span><UserRound/>{a.author}</span><span><Clock3/>{a.readTime} menit baca</span><span>Diperbarui {date(a.updatedAt)}</span></div></header><div className="article-body" dangerouslySetInnerHTML={{__html:a.content}}/></article>{related.length>0&&<aside className="related"><span className="eyebrow">Baca berikutnya</span><h2>Artikel terkait</h2>{related.slice(0,3).map(r=><button key={r.id} onClick={()=>open(r)}><span>{r.category}</span><strong>{r.title}</strong><ChevronRight/></button>)}</aside>}</main>}
+function Reader({article:a,related,admin,back,open,edit,remove}:{article:Article;related:Article[];admin:boolean;back:()=>void;open:(a:Article)=>void;edit:()=>void;remove:()=>void}){
+ const Icon=meta[a.category].icon,articleDoc=useMemo(()=>prepareArticleDocument(a.content),[a.content]);
+ const [activeTab,setActiveTab]=useState(articleDoc.tabs[0]?.id||'');
+ useEffect(()=>{
+  const updateActiveTab=()=>{
+   let current=articleDoc.tabs[0]?.id||'';
+   for(const tab of articleDoc.tabs){const heading=document.getElementById(tab.id);if(heading&&heading.getBoundingClientRect().top<=150)current=tab.id;else break}
+   setActiveTab(current);
+  };
+  setActiveTab(articleDoc.tabs[0]?.id||'');updateActiveTab();
+  window.addEventListener('scroll',updateActiveTab,{passive:true});
+  return()=>window.removeEventListener('scroll',updateActiveTab);
+ },[a.id,articleDoc]);
+ const goToTab=(id:string)=>{setActiveTab(id);document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})};
+ return <main className="reader-shell">
+  <div className="reader-tools"><button onClick={back}><ArrowLeft/>Kembali ke semua artikel</button>{admin&&<div><button onClick={edit}><Edit3/>Edit</button><button onClick={remove} className="danger"><Trash2/>Hapus</button></div>}</div>
+  <div className="reader-layout">
+   {articleDoc.tabs.length>0&&<aside className="document-tabs"><div className="document-tabs-card"><span className="eyebrow">Document Tabs</span><strong>Di artikel ini</strong><nav aria-label="Daftar isi artikel">{articleDoc.tabs.map(tab=><button key={tab.id} type="button" className={`${activeTab===tab.id?'active ':''}level-${tab.level}`} onClick={()=>goToTab(tab.id)}><span/>{tab.label}</button>)}</nav></div></aside>}
+   <div className="reader-column">
+    <article className="reader"><header><span className={`cat-icon ${meta[a.category].color}`}><Icon/></span><span className="category">{a.category}</span><h1>{a.title}</h1><p>{a.summary}</p><div className="byline"><span><UserRound/>{a.author}</span><span><Clock3/>{a.readTime} menit baca</span><span>Diperbarui {date(a.updatedAt)}</span></div></header><div className="article-body" dangerouslySetInnerHTML={{__html:articleDoc.html}}/></article>
+    {related.length>0&&<aside className="related"><span className="eyebrow">Baca berikutnya</span><h2>Artikel terkait</h2>{related.slice(0,3).map(r=><button key={r.id} onClick={()=>open(r)}><span>{r.category}</span><strong>{r.title}</strong><ChevronRight/></button>)}</aside>}
+   </div>
+  </div>
+ </main>
+}
 function Frame({title,sub,close,children}:{title:string;sub:string;close:()=>void;children:ReactNode}){return <div className="backdrop" onMouseDown={e=>e.target===e.currentTarget&&close()}><section className="modal"><button className="close" onClick={close}><X/></button><h2>{title}</h2><p>{sub}</p>{children}</section></div>}
 function Login({close,success}:{close:()=>void;success:()=>void}){
  const [error,setError]=useState(''),[loading,setLoading]=useState(false);
