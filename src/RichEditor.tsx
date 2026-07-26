@@ -198,11 +198,19 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
     setSpacingAfter(after);
   };
 
-  const applyParagraphSpacing = (beforeValue: number, afterValue: number, reset = false) => {
+  const applyParagraphSpacing = ({
+    before,
+    after,
+    reset = false,
+  }: {
+    before?: number;
+    after?: number;
+    reset?: boolean;
+  }) => {
     const targets = spacingTargets();
     if (!targets.size) return;
-    const before = Math.max(0, Math.min(144, beforeValue || 0));
-    const after = Math.max(0, Math.min(144, afterValue || 0));
+    const safeBefore = before === undefined ? undefined : Math.max(0, Math.min(144, before || 0));
+    const safeAfter = after === undefined ? undefined : Math.max(0, Math.min(144, after || 0));
     targets.forEach((target) => {
       target.classList.remove('spacing-tight', 'spacing-relaxed');
       if (target.tagName === 'LI') target.closest('ul,ol')?.classList.remove('spacing-tight', 'spacing-relaxed');
@@ -210,8 +218,8 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
         target.style.removeProperty('margin-top');
         target.style.removeProperty('margin-bottom');
       } else {
-        target.style.marginTop = `${before}pt`;
-        target.style.marginBottom = `${after}pt`;
+        if (safeBefore !== undefined) target.style.marginTop = `${safeBefore}pt`;
+        if (safeAfter !== undefined) target.style.marginBottom = `${safeAfter}pt`;
       }
     });
     emit();
@@ -220,17 +228,17 @@ export default function RichEditor({ initialHtml = '', onChange, articleContext 
   const updateSpacingBefore = (value: number) => {
     const next = Math.max(0, Math.min(144, value || 0));
     setSpacingBefore(next);
-    applyParagraphSpacing(next, spacingAfter);
+    applyParagraphSpacing({ before: next });
   };
 
   const updateSpacingAfter = (value: number) => {
     const next = Math.max(0, Math.min(144, value || 0));
     setSpacingAfter(next);
-    applyParagraphSpacing(spacingBefore, next);
+    applyParagraphSpacing({ after: next });
   };
 
   const resetParagraphSpacing = () => {
-    applyParagraphSpacing(0, 0, true);
+    applyParagraphSpacing({ reset: true });
     syncSpacingFromSelection();
   };
 
