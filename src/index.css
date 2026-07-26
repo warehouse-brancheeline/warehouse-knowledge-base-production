@@ -159,3 +159,17 @@
   .document-tabs-card{border-radius:11px}
   .document-tabs-card>strong{font-size:13px}
 }
+
+/* Text spacing control */
+.spacing-tool-group select{height:33px;min-width:72px;border:1px solid #d8e1db;border-radius:7px;background:#fff;padding:0 7px;color:#536059;outline:0;font-size:10px;font-weight:700}
+.spacing-tool-group select:hover,.spacing-tool-group select:focus{border-color:#8eae9e;background:#edf3ef;color:var(--green)}
+.editable-surface p.spacing-tight,.article-body p.spacing-tight{margin-top:0!important;margin-bottom:6px!important;line-height:1.4!important}
+.editable-surface h1.spacing-tight,.editable-surface h2.spacing-tight,.editable-surface h3.spacing-tight,.article-body h1.spacing-tight,.article-body h2.spacing-tight,.article-body h3.spacing-tight{margin-top:18px!important;margin-bottom:6px!important;line-height:1.25!important}
+.editable-surface ul.spacing-tight,.editable-surface ol.spacing-tight,.article-body ul.spacing-tight,.article-body ol.spacing-tight{margin-top:6px!important;margin-bottom:6px!important;line-height:1.4!important}
+.editable-surface ul.spacing-tight>li,.editable-surface ol.spacing-tight>li,.article-body ul.spacing-tight>li,.article-body ol.spacing-tight>li{margin-top:2px!important;margin-bottom:2px!important}
+.editable-surface blockquote.spacing-tight,.editable-surface pre.spacing-tight,.article-body blockquote.spacing-tight,.article-body pre.spacing-tight{margin-top:9px!important;margin-bottom:9px!important;line-height:1.4!important}
+.editable-surface p.spacing-relaxed,.article-body p.spacing-relaxed{margin-bottom:24px!important;line-height:1.9!important}
+.editable-surface h1.spacing-relaxed,.editable-surface h2.spacing-relaxed,.editable-surface h3.spacing-relaxed,.article-body h1.spacing-relaxed,.article-body h2.spacing-relaxed,.article-body h3.spacing-relaxed{margin-top:52px!important;margin-bottom:18px!important;line-height:1.4!important}
+.editable-surface ul.spacing-relaxed,.editable-surface ol.spacing-relaxed,.article-body ul.spacing-relaxed,.article-body ol.spacing-relaxed{margin-top:22px!important;margin-bottom:22px!important;line-height:1.85!important}
+.editable-surface ul.spacing-relaxed>li,.editable-surface ol.spacing-relaxed>li,.article-body ul.spacing-relaxed>li,.article-body ol.spacing-relaxed>li{margin-top:13px!important;margin-bottom:13px!important}
+.editable-surface blockquote.spacing-relaxed,.editable-surface pre.spacing-relaxed,.article-body blockquote.spacing-relaxed,.article-body pre.spacing-relaxed{margin-top:30px!important;margin-bottom:30px!important;line-height:1.8!important}
